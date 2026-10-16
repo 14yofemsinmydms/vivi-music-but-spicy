@@ -60,6 +60,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.media3.exoplayer.offline.Download
+import androidx.media3.exoplayer.offline.DownloadService
+import com.metrolist.music.playback.ExoDownloadService
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -200,7 +204,7 @@ import com.metrolist.music.constants.SleepTimerFadeOutKey
 import com.metrolist.music.constants.SleepTimerStopAfterCurrentSongKey
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BottomSheetPlayer(
     state: BottomSheetState,
@@ -583,7 +587,8 @@ fun BottomSheetPlayer(
             }
         }
 
-    val download by LocalDownloadUtil.current
+    val downloadUtil = LocalDownloadUtil.current
+    val download by downloadUtil
         .getDownload(mediaMetadata?.id ?: "")
         .collectAsStateWithLifecycle(initialValue = null)
 
@@ -1168,16 +1173,23 @@ fun BottomSheetPlayer(
                             } else {
                                 FilledIconButton(
                                     onClick = {
-                                        val intent =
-                                            Intent().apply {
-                                                action = Intent.ACTION_SEND
-                                                type = "text/plain"
-                                                putExtra(
-                                                    Intent.EXTRA_TEXT,
-                                                    "https://music.youtube.com/watch?v=${mediaMetadata.id}",
-                                                )
+                                        if (mediaMetadata != null) {
+                                            when (download?.state) {
+                                                Download.STATE_COMPLETED,
+                                                Download.STATE_QUEUED,
+                                                Download.STATE_DOWNLOADING -> {
+                                                    DownloadService.sendRemoveDownload(
+                                                        context,
+                                                        ExoDownloadService::class.java,
+                                                        mediaMetadata.id,
+                                                        false,
+                                                    )
+                                                }
+                                                else -> {
+                                                    downloadUtil.download(mediaMetadata)
+                                                }
                                             }
-                                        context.startActivity(Intent.createChooser(intent, null))
+                                        }
                                     },
                                     shape = shareShape,
                                     colors =
@@ -1187,11 +1199,29 @@ fun BottomSheetPlayer(
                                         ),
                                     modifier = Modifier.size(42.dp),
                                 ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.share),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(24.dp),
-                                    )
+                                    when (download?.state) {
+                                        Download.STATE_COMPLETED -> {
+                                            Icon(
+                                                painter = painterResource(R.drawable.offline),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(24.dp),
+                                            )
+                                        }
+                                        Download.STATE_QUEUED,
+                                        Download.STATE_DOWNLOADING -> {
+                                            CircularWavyProgressIndicator(
+                                                modifier = Modifier.size(24.dp),
+                                                color = iconButtonColor,
+                                            )
+                                        }
+                                        else -> {
+                                            Icon(
+                                                painter = painterResource(R.drawable.download),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(24.dp),
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1290,27 +1320,59 @@ fun BottomSheetPlayer(
                                         .clip(RoundedCornerShape(24.dp))
                                         .background(textButtonColor)
                                         .clickable {
-                                            val intent =
-                                                Intent().apply {
-                                                    action = Intent.ACTION_SEND
-                                                    type = "text/plain"
-                                                    putExtra(
-                                                        Intent.EXTRA_TEXT,
-                                                        "https://music.youtube.com/watch?v=${mediaMetadata.id}",
-                                                    )
+                                            if (mediaMetadata != null) {
+                                                when (download?.state) {
+                                                    Download.STATE_COMPLETED,
+                                                    Download.STATE_QUEUED,
+                                                    Download.STATE_DOWNLOADING -> {
+                                                        DownloadService.sendRemoveDownload(
+                                                            context,
+                                                            ExoDownloadService::class.java,
+                                                            mediaMetadata.id,
+                                                            false,
+                                                        )
+                                                    }
+                                                    else -> {
+                                                        downloadUtil.download(mediaMetadata)
+                                                    }
                                                 }
-                                            context.startActivity(Intent.createChooser(intent, null))
+                                            }
                                         },
                             ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.share),
-                                    contentDescription = null,
-                                    tint = iconButtonColor,
-                                    modifier =
-                                        Modifier
-                                            .align(Alignment.Center)
-                                            .size(24.dp),
-                                )
+                                when (download?.state) {
+                                    Download.STATE_COMPLETED -> {
+                                        Icon(
+                                            painter = painterResource(R.drawable.offline),
+                                            contentDescription = null,
+                                            tint = iconButtonColor,
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.Center)
+                                                    .size(24.dp),
+                                        )
+                                    }
+                                    Download.STATE_QUEUED,
+                                    Download.STATE_DOWNLOADING -> {
+                                        CircularWavyProgressIndicator(
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.Center)
+                                                    .size(24.dp),
+                                            color = iconButtonColor,
+                                        )
+                                    }
+                                    else -> {
+                                        Icon(
+                                            painter = painterResource(R.drawable.download),
+                                            contentDescription = null,
+                                            tint = iconButtonColor,
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.Center)
+                                                    .size(24.dp),
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

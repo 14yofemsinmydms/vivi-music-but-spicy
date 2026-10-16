@@ -479,6 +479,15 @@ enum class LyricsAnimationStyle {
     APPLE,
 }
 
+enum class LyricsRenderer {
+    SPICY,
+    METRO,
+}
+
+val LyricsRendererKey = stringPreferencesKey("lyricsRenderer")
+val EnableSpicyLyricsKey = booleanPreferencesKey("enableSpicyLyrics")
+val SpicyLyricsApiKey = stringPreferencesKey("spicyLyricsApiKey")
+
 val LyricsTextSizeKey = floatPreferencesKey("lyricsTextSize")
 val LyricsLineSpacingKey = floatPreferencesKey("lyricsLineSpacing")
 val RespectAgentPositioningKey = booleanPreferencesKey("respectAgentPositioning")

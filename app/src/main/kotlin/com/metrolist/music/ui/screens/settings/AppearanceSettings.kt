@@ -62,7 +62,6 @@ import com.metrolist.music.constants.DynamicThemeKey
 import com.metrolist.music.constants.EnableDynamicIconKey
 import com.metrolist.music.constants.EnableHighRefreshRateKey
 import com.metrolist.music.constants.EnableLandscapeScalingKey
-import com.metrolist.music.constants.ExperimentalLyricsKey
 import com.metrolist.music.constants.ForceBottomNavBarKey
 import com.metrolist.music.constants.GridItemSize
 import com.metrolist.music.constants.GridItemsSizeKey
@@ -70,11 +69,9 @@ import com.metrolist.music.constants.HidePlayerThumbnailKey
 import com.metrolist.music.constants.HideStatusBarOnFullscreenKey
 import com.metrolist.music.constants.LibraryFilter
 import com.metrolist.music.constants.ListenTogetherInTopBarKey
-import com.metrolist.music.constants.LyricsAnimationStyle
-import com.metrolist.music.constants.LyricsAnimationStyleKey
 import com.metrolist.music.constants.LyricsClickKey
-import com.metrolist.music.constants.LyricsGlowEffectKey
-import com.metrolist.music.constants.LyricsLineSpacingKey
+import com.metrolist.music.constants.LyricsRenderer
+import com.metrolist.music.constants.LyricsRendererKey
 import com.metrolist.music.constants.LyricsScrollKey
 import com.metrolist.music.constants.LyricsTextPositionKey
 import com.metrolist.music.constants.LyricsTextSizeKey
@@ -225,21 +222,15 @@ fun AppearanceSettings(
             defaultValue = false,
         )
     val (respectAgentPositioning, onRespectAgentPositioningChange) = rememberPreference(RespectAgentPositioningKey, defaultValue = true)
-    val (experimentalLyrics, onExperimentalLyricsChange) = rememberPreference(ExperimentalLyricsKey, defaultValue = true)
-
-    val (lyricsGlowEffect, onLyricsGlowEffectChange) = rememberPreference(LyricsGlowEffectKey, defaultValue = false)
-    val (lyricsAnimationStyle, onLyricsAnimationStyleChange) =
+    val (lyricsRenderer, onLyricsRendererChange) =
         rememberEnumPreference(
-            LyricsAnimationStyleKey,
-            defaultValue = LyricsAnimationStyle.FADE,
+            LyricsRendererKey,
+            defaultValue = LyricsRenderer.SPICY,
         )
     val (lyricsTextSize, onLyricsTextSizeChange) = rememberPreference(LyricsTextSizeKey, defaultValue = 24f)
-    val (lyricsLineSpacing, onLyricsLineSpacingChange) = rememberPreference(LyricsLineSpacingKey, defaultValue = 1.2f)
 
-    var showExperimentalLyricsBetaDialog by remember { mutableStateOf(false) }
-    var showLyricsAnimationStyleDialog by remember { mutableStateOf(false) }
+    var showLyricsRendererDialog by remember { mutableStateOf(false) }
     var showLyricsTextSizeDialog by remember { mutableStateOf(false) }
-    var showLyricsLineSpacingDialog by remember { mutableStateOf(false) }
 
     val (sliderStyle, onSliderStyleChange) =
         rememberEnumPreference(
@@ -372,24 +363,26 @@ fun AppearanceSettings(
         )
     }
 
-    if (showLyricsAnimationStyleDialog) {
+    if (showLyricsRendererDialog) {
         EnumDialog(
-            onDismiss = { showLyricsAnimationStyleDialog = false },
+            onDismiss = { showLyricsRendererDialog = false },
             onSelect = {
-                onLyricsAnimationStyleChange(it)
-                showLyricsAnimationStyleDialog = false
+                onLyricsRendererChange(it)
+                showLyricsRendererDialog = false
             },
-            title = stringResource(R.string.lyrics_animation_style_title),
-            current = lyricsAnimationStyle,
-            values = LyricsAnimationStyle.values().toList(),
+            title = stringResource(R.string.lyrics_renderer),
+            current = lyricsRenderer,
+            values = LyricsRenderer.values().toList(),
             valueText = {
                 when (it) {
-                    LyricsAnimationStyle.NONE -> stringResource(R.string.lyrics_animation_none)
-                    LyricsAnimationStyle.FADE -> stringResource(R.string.lyrics_animation_fade)
-                    LyricsAnimationStyle.GLOW -> stringResource(R.string.lyrics_animation_glow)
-                    LyricsAnimationStyle.SLIDE -> stringResource(R.string.lyrics_animation_slide)
-                    LyricsAnimationStyle.KARAOKE -> stringResource(R.string.lyrics_animation_karaoke)
-                    LyricsAnimationStyle.APPLE -> stringResource(R.string.lyrics_animation_apple)
+                    LyricsRenderer.SPICY -> stringResource(R.string.lyrics_renderer_spicy)
+                    LyricsRenderer.METRO -> stringResource(R.string.lyrics_renderer_metro)
+                }
+            },
+            valueDescription = {
+                when (it) {
+                    LyricsRenderer.SPICY -> stringResource(R.string.lyrics_renderer_spicy_desc)
+                    LyricsRenderer.METRO -> stringResource(R.string.lyrics_renderer_metro_desc)
                 }
             },
         )
@@ -458,68 +451,6 @@ fun AppearanceSettings(
         }
     }
 
-    if (showLyricsLineSpacingDialog) {
-        var tempLineSpacing by remember { mutableFloatStateOf(lyricsLineSpacing) }
-
-        DefaultDialog(
-            onDismiss = {
-                tempLineSpacing = lyricsLineSpacing
-                showLyricsLineSpacingDialog = false
-            },
-            buttons = {
-                TextButton(
-                    onClick = {
-                        tempLineSpacing = 1.3f
-                    },
-                ) {
-                    Text(stringResource(R.string.reset))
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                TextButton(
-                    onClick = {
-                        tempLineSpacing = lyricsLineSpacing
-                        showLyricsLineSpacingDialog = false
-                    },
-                ) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-                TextButton(
-                    onClick = {
-                        onLyricsLineSpacingChange(tempLineSpacing)
-                        showLyricsLineSpacingDialog = false
-                    },
-                ) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            },
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(16.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.lyrics_line_spacing),
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(bottom = 16.dp),
-                )
-
-                Text(
-                    text = String.format(Locale.US, "%.1f", tempLineSpacing),
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(bottom = 16.dp),
-                )
-
-                Slider(
-                    value = tempLineSpacing,
-                    onValueChange = { tempLineSpacing = it },
-                    valueRange = 1.0f..3.0f,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-    }
 
     if (showPlayerButtonsStyleDialog) {
         EnumDialog(
@@ -1344,102 +1275,27 @@ fun AppearanceSettings(
                     add(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.lyrics),
-                            title = { Text(stringResource(R.string.experimental_lyrics)) },
-                            description = { Text(stringResource(R.string.experimental_lyrics_desc)) },
-                            showBadge = true,
-                            trailingContent = {
-                                Switch(
-                                    checked = experimentalLyrics,
-                                    onCheckedChange = {
-                                        if (!experimentalLyrics) {
-                                            showExperimentalLyricsBetaDialog = true
-                                        } else {
-                                            onExperimentalLyricsChange(false)
-                                        }
-                                    },
-                                    thumbContent = {
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    id = if (experimentalLyrics) R.drawable.check else R.drawable.close,
-                                                ),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                                        )
+                            title = { Text(stringResource(R.string.lyrics_renderer)) },
+                            description = {
+                                Text(
+                                    when (lyricsRenderer) {
+                                        LyricsRenderer.SPICY -> stringResource(R.string.lyrics_renderer_spicy)
+                                        LyricsRenderer.METRO -> stringResource(R.string.lyrics_renderer_metro)
                                     },
                                 )
                             },
-                            onClick = {
-                                if (!experimentalLyrics) {
-                                    showExperimentalLyricsBetaDialog = true
-                                } else {
-                                    onExperimentalLyricsChange(false)
-                                }
-                            },
+                            onClick = { showLyricsRendererDialog = true },
                         ),
                     )
 
-                    if (!experimentalLyrics) {
-                        add(
-                            Material3SettingsItem(
-                                icon = painterResource(R.drawable.lyrics),
-                                title = { Text(stringResource(R.string.lyrics_glow_effect)) },
-                                description = { Text(stringResource(R.string.lyrics_glow_effect_desc)) },
-                                trailingContent = {
-                                    Switch(
-                                        checked = lyricsGlowEffect,
-                                        onCheckedChange = onLyricsGlowEffectChange,
-                                        thumbContent = {
-                                            Icon(
-                                                painter =
-                                                    painterResource(
-                                                        id = if (lyricsGlowEffect) R.drawable.check else R.drawable.close,
-                                                    ),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(SwitchDefaults.IconSize),
-                                            )
-                                        },
-                                    )
-                                },
-                                onClick = { onLyricsGlowEffectChange(!lyricsGlowEffect) },
-                            ),
-                        )
-                        add(
-                            Material3SettingsItem(
-                                icon = painterResource(R.drawable.lyrics),
-                                title = { Text(stringResource(R.string.lyrics_animation_style_title)) },
-                                description = {
-                                    Text(
-                                        when (lyricsAnimationStyle) {
-                                            LyricsAnimationStyle.NONE -> stringResource(R.string.lyrics_animation_none)
-                                            LyricsAnimationStyle.FADE -> stringResource(R.string.lyrics_animation_fade)
-                                            LyricsAnimationStyle.GLOW -> stringResource(R.string.lyrics_animation_glow)
-                                            LyricsAnimationStyle.SLIDE -> stringResource(R.string.lyrics_animation_slide)
-                                            LyricsAnimationStyle.KARAOKE -> stringResource(R.string.lyrics_animation_karaoke)
-                                            LyricsAnimationStyle.APPLE -> stringResource(R.string.lyrics_animation_apple)
-                                        },
-                                    )
-                                },
-                                onClick = { showLyricsAnimationStyleDialog = true },
-                            ),
-                        )
-                        add(
-                            Material3SettingsItem(
-                                icon = painterResource(R.drawable.lyrics),
-                                title = { Text(stringResource(R.string.lyrics_text_size)) },
-                                description = { Text("${lyricsTextSize.roundToInt()} sp") },
-                                onClick = { showLyricsTextSizeDialog = true },
-                            ),
-                        )
-                        add(
-                            Material3SettingsItem(
-                                icon = painterResource(R.drawable.lyrics),
-                                title = { Text(stringResource(R.string.lyrics_line_spacing)) },
-                                description = { Text(String.format(Locale.US, "%.1f", lyricsLineSpacing)) },
-                                onClick = { showLyricsLineSpacingDialog = true },
-                            ),
-                        )
-                    }
+                    add(
+                        Material3SettingsItem(
+                            icon = painterResource(R.drawable.lyrics),
+                            title = { Text(stringResource(R.string.lyrics_text_size)) },
+                            description = { Text("${lyricsTextSize.roundToInt()} sp") },
+                            onClick = { showLyricsTextSizeDialog = true },
+                        ),
+                    )
 
                     add(
                         Material3SettingsItem(
@@ -1836,25 +1692,6 @@ fun AppearanceSettings(
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (showExperimentalLyricsBetaDialog) {
-            DefaultDialog(
-                onDismiss = { showExperimentalLyricsBetaDialog = false },
-                title = { Text(stringResource(R.string.experimental_lyrics_beta_title)) },
-                buttons = {
-                    TextButton(onClick = { showExperimentalLyricsBetaDialog = false }) {
-                        Text(stringResource(R.string.cancel))
-                    }
-                    TextButton(onClick = {
-                        showExperimentalLyricsBetaDialog = false
-                        onExperimentalLyricsChange(true)
-                    }) {
-                        Text(stringResource(R.string.enable))
-                    }
-                },
-            ) {
-                Text(stringResource(R.string.experimental_lyrics_beta_message))
-            }
-        }
     }
 
     TopAppBar(

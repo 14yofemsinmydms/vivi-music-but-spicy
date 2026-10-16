@@ -994,4 +994,14 @@
     <string name="stream_source_web_creator_desc">Creator web client.</string>
     <string name="top_result">Top result</string>
     <string name="other">Other</string>
+
+    <!-- Lyrics Renderer System -->
+    <string name="lyrics_renderer">Lyrics Renderer</string>
+    <string name="lyrics_renderer_desc">Choose between SpicyLyrics canvas engine and native MetroLyrics</string>
+    <string name="lyrics_renderer_spicy">SpicyLyrics</string>
+    <string name="lyrics_renderer_spicy_desc">Authentic Apple Music syllable canvas with dynamic background</string>
+    <string name="lyrics_renderer_metro">MetroLyrics</string>
+    <string name="lyrics_renderer_metro_desc">Metrolist native Compose lyrics with smooth line tracking</string>
+    <string name="enable_spicy_lyrics">Spicy Lyrics</string>
+    <string name="enable_spicy_lyrics_desc">Enable Apple Music syllable-synced lyrics from SpicyLyrics</string>
 </resources>
