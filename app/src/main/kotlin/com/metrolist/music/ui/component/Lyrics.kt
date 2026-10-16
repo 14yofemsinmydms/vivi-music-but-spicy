@@ -126,33 +126,90 @@ fun SpicyLyricsScreen(
         lyricsViewModel.processLyrics(lyrics, enabledLanguages, romanizeCyrillicByLine, showIntervalIndicator)
     }
 
+    val validLines = remember(lines) { lines.filter { it.text.isNotBlank() } }
+
+    val parsedTtml = remember(lyrics) {
+        if (lyrics != null && (lyrics.startsWith("<tt") || lyrics.startsWith("<?xml") || lyrics.contains("<tt:tt") || lyrics.contains("<tt "))) {
+            try {
+                TtmlLyricsParser.parse(lyrics.byteInputStream())
+            } catch (_: Exception) {
+                null
+            }
+        } else null
+    }
+
+    val hasSyllableSync = remember(parsedTtml, validLines) {
+        if (parsedTtml != null) {
+            parsedTtml.type == LyricsType.Syllable
+        } else {
+            validLines.any { !it.words.isNullOrEmpty() }
+        }
+    }
+
+    val resolvedLyricsType = remember(hasSyllableSync, parsedTtml, validLines, lyrics) {
+        if (hasSyllableSync) {
+            LyricsType.Syllable
+        } else if (parsedTtml?.type == LyricsType.Static || (validLines.isEmpty() && lyrics != null)) {
+            LyricsType.Static
+        } else {
+            LyricsType.Line
+        }
+    }
+
     val lyricsOffset = currentSong?.song?.lyricsOffset?.toLong() ?: 0L
 
-    val spicyLines = remember(lines, lyrics) {
-        if (lyrics != null && (lyrics.startsWith("<tt") || lyrics.startsWith("<?xml"))) {
-            TtmlLyricsParser.parse(lyrics.byteInputStream()).lines
+    val spicyLines = remember(parsedTtml, validLines) {
+        if (parsedTtml != null) {
+            parsedTtml.lines
         } else {
-            lines.mapIndexed { index, entry ->
-                val nextTime = lines.getOrNull(index + 1)?.time
+            validLines.mapIndexed { index, entry ->
+                val nextTime = validLines.getOrNull(index + 1)?.time
                 val spicyWords = if (!entry.words.isNullOrEmpty()) {
-                    entry.words.mapIndexed { idx, wt ->
+                    var searchOffset = 0
+                    val continuesIntoNext = entry.words.mapIndexed { idx, wt ->
+                        val cleanWord = wt.text.trim()
                         val isLast = idx == entry.words.size - 1
+                        val wordPos = entry.text.indexOf(cleanWord, searchOffset)
+                        if (wordPos >= 0 && !isLast) {
+                            val endPos = wordPos + cleanWord.length
+                            searchOffset = endPos
+                            if (endPos < entry.text.length) {
+                                !entry.text[endPos].isWhitespace()
+                            } else false
+                        } else false
+                    }
+                    entry.words.mapIndexed { idx, wt ->
+                        val cleanWord = wt.text.trim()
+                        val isPartOfWord = idx > 0 && continuesIntoNext[idx - 1]
                         Word(
-                            text = wt.text,
+                            text = cleanWord,
                             startMs = (wt.startTime * 1000).toLong(),
                             endMs = (wt.endTime * 1000).toLong(),
-                            isPartOfWord = !isLast && !wt.text.endsWith(" "),
+                            isPartOfWord = isPartOfWord,
                         )
                     }
                 } else {
                     val lineEnd = nextTime ?: (entry.time + 4000L)
-                    listOf(
-                        Word(
-                            text = entry.text,
-                            startMs = entry.time,
-                            endMs = lineEnd,
+                    val tokens = entry.text.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+                    if (tokens.isNotEmpty()) {
+                        tokens.map { token ->
+                            Word(
+                                text = token,
+                                startMs = entry.time,
+                                endMs = lineEnd,
+                                isPartOfWord = false,
+                            )
+                        }
+                    } else {
+                        listOf(
+                            Word(
+                                text = entry.text,
+                                startMs = entry.time,
+                                endMs = lineEnd,
+                                isPartOfWord = false,
+                            )
                         )
-                    )
+                    }
                 }
                 val role = if (entry.isBackground) LineRole.BACKGROUND
                            else LineRole.LEAD
@@ -173,10 +230,6 @@ fun SpicyLyricsScreen(
         buildDisplayTimeline(spicyLines, minimalMode = false, holdThroughShortGaps = false)
     }
 
-    val hasSyllableSync = remember(spicyLines) {
-        spicyLines.any { it.words.size > 1 || (it.words.firstOrNull()?.duration ?: 0L) > 0L }
-    }
-
     val docId = remember(currentSong?.song?.id, lyrics) {
         "${currentSong?.song?.id ?: ""}|${currentLyricsEntity?.provider ?: ""}|${lyrics?.hashCode() ?: 0}"
     }
@@ -190,8 +243,8 @@ fun SpicyLyricsScreen(
         )
     }
 
-    val spicyFooter = remember(currentLyricsEntity?.provider) {
-        LyricsFooter(
+    val spicyFooter = remember(parsedTtml, currentLyricsEntity?.provider) {
+        parsedTtml?.footer ?: LyricsFooter(
             provenance = LyricsProvenance(
                 provider = currentLyricsEntity?.provider ?: "Spicy Lyrics"
             )
@@ -250,7 +303,8 @@ fun SpicyLyricsScreen(
                     .fadingEdge(vertical = 48.dp),
                 fontSizeScale = (lyricsTextSize / 24f).coerceIn(0.7f, 1.8f),
                 config = renderConfig,
-                lyricsType = if (hasSyllableSync) LyricsType.Syllable else LyricsType.Line,
+                lyricsType = resolvedLyricsType,
+                focusAnchorFraction = 0.5f,
                 isPlaying = isPlaying,
             )
         }

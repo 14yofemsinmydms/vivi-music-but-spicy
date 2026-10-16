@@ -1173,7 +1173,7 @@ fun BottomSheetPlayer(
                             } else {
                                 FilledIconButton(
                                     onClick = {
-                                        if (mediaMetadata != null) {
+                                        mediaMetadata?.let { meta ->
                                             when (download?.state) {
                                                 Download.STATE_COMPLETED,
                                                 Download.STATE_QUEUED,
@@ -1181,12 +1181,12 @@ fun BottomSheetPlayer(
                                                     DownloadService.sendRemoveDownload(
                                                         context,
                                                         ExoDownloadService::class.java,
-                                                        mediaMetadata.id,
+                                                        meta.id,
                                                         false,
                                                     )
                                                 }
                                                 else -> {
-                                                    downloadUtil.download(mediaMetadata)
+                                                    downloadUtil.download(meta)
                                                 }
                                             }
                                         }
@@ -1203,7 +1203,7 @@ fun BottomSheetPlayer(
                                         Download.STATE_COMPLETED -> {
                                             Icon(
                                                 painter = painterResource(R.drawable.offline),
-                                                contentDescription = null,
+                                                contentDescription = stringResource(R.string.remove_download),
                                                 modifier = Modifier.size(24.dp),
                                             )
                                         }
@@ -1217,7 +1217,7 @@ fun BottomSheetPlayer(
                                         else -> {
                                             Icon(
                                                 painter = painterResource(R.drawable.download),
-                                                contentDescription = null,
+                                                contentDescription = stringResource(R.string.action_download),
                                                 modifier = Modifier.size(24.dp),
                                             )
                                         }
@@ -1320,7 +1320,7 @@ fun BottomSheetPlayer(
                                         .clip(RoundedCornerShape(24.dp))
                                         .background(textButtonColor)
                                         .clickable {
-                                            if (mediaMetadata != null) {
+                                            mediaMetadata?.let { meta ->
                                                 when (download?.state) {
                                                     Download.STATE_COMPLETED,
                                                     Download.STATE_QUEUED,
@@ -1328,12 +1328,12 @@ fun BottomSheetPlayer(
                                                         DownloadService.sendRemoveDownload(
                                                             context,
                                                             ExoDownloadService::class.java,
-                                                            mediaMetadata.id,
+                                                            meta.id,
                                                             false,
                                                         )
                                                     }
                                                     else -> {
-                                                        downloadUtil.download(mediaMetadata)
+                                                        downloadUtil.download(meta)
                                                     }
                                                 }
                                             }
@@ -1343,7 +1343,7 @@ fun BottomSheetPlayer(
                                     Download.STATE_COMPLETED -> {
                                         Icon(
                                             painter = painterResource(R.drawable.offline),
-                                            contentDescription = null,
+                                            contentDescription = stringResource(R.string.remove_download),
                                             tint = iconButtonColor,
                                             modifier =
                                                 Modifier
@@ -1364,7 +1364,7 @@ fun BottomSheetPlayer(
                                     else -> {
                                         Icon(
                                             painter = painterResource(R.drawable.download),
-                                            contentDescription = null,
+                                            contentDescription = stringResource(R.string.action_download),
                                             tint = iconButtonColor,
                                             modifier =
                                                 Modifier

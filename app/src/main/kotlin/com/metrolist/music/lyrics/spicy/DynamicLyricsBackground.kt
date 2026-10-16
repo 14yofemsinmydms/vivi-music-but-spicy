@@ -48,7 +48,11 @@ fun DynamicLyricsBackground(
     var coverArtBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     LaunchedEffect(mediaMetadata?.id, mediaMetadata?.thumbnailUrl) {
-        val url = mediaMetadata?.thumbnailUrl ?: return@LaunchedEffect
+        val url = mediaMetadata?.thumbnailUrl
+        if (url == null) {
+            coverArtBitmap = null
+            return@LaunchedEffect
+        }
         val bitmap = withContext(Dispatchers.IO) {
             val request = ImageRequest.Builder(context)
                 .data(url)
